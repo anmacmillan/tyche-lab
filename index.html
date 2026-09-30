@@ -150,14 +150,15 @@ footer{color:var(--muted);font-size:13px;margin:24px 0 8px;text-align:center}
 
 </div>
 
-<footer>Tyche Lab · new entries reach the other iPads within about 5 minutes</footer>
+<footer>Tyche Lab · new entries reach the other iPads within a minute or so</footer>
 
 <script>
 // ===== CONFIG: the only part to edit =====
 const CONFIG = {
   START: "2026-10-02",          // trial day 1 (the night of this date)
-  CSV_URL: "",                  // Google Sheet "Publish to web" CSV link; blank = demo data
-  FORM: null,                   // {action:".../formResponse", who:"entry.1", night:"entry.2", sick:"entry.3", whose:"entry.4", look:"entry.5", notes:"entry.6"}
+  CSV_URL: "https://docs.google.com/spreadsheets/d/1BRUg5L-W7kL3YuA7C_pgAK0Kk-1WCSG16LNtWiuqDU4/export?format=csv", // responses sheet; blank = demo data
+  FORM: {action:"https://docs.google.com/forms/d/e/1FAIpQLSdH_6sECcbs5_Ur7NTm540alRIJyO2PP4Ej8p3rpGVuXIseRA/formResponse",
+         who:"entry.983159670", night:"entry.1092903364", sick:"entry.146661965", whose:"entry.59336309", look:"entry.2002184634", notes:"entry.2036792142"},
   NAMES: ["Manon", "Margot"],
   FEE: 1,                       // £ per night logged
   PAID: { Manon: 0, Margot: 0 } // £ paid out (fees are paid at the end of the trial)
@@ -245,7 +246,8 @@ function renderTop(){
   const todayD=Math.max(1,Math.min(30,dayIndex(new Date().toISOString().slice(0,10))));
   const shownDay = CONFIG.CSV_URL ? todayD : Math.max(...NIGHTS.keys(),1)+1;
   const d=Math.min(30,shownDay);
-  document.getElementById("dayNum").textContent=d;
+  const realD=dayIndex(new Date().toISOString().slice(0,10));
+  document.getElementById("dayNum").textContent=(CONFIG.CSV_URL&&realD<1)?"starts "+new Date(CONFIG.START+"T12:00:00").toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"}):d;
   const ft=document.getElementById("foodToday");
   ft.textContent="Food "+foodFor(d)+(SETTLE.has(d)?" (settling in)":"");
   ft.className="pill "+(SETTLE.has(d)?"ps":foodFor(d)=="A"?"pa":"pb");
