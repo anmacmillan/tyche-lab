@@ -235,8 +235,9 @@ const tycheSick = e => e.sick>0 && !/loki/i.test(e.whose);
 // ---- rendering ----
 let ENTRIES=[], NIGHTS=new Map();
 function counts(upTo=30){
-  const c={A:{s:0,w:0},B:{s:0,w:0}};
-  for(const [d,e] of NIGHTS){if(d>upTo||SETTLE.has(d))continue;const f=foodFor(d);tycheSick(e)?c[f].s++:c[f].w++}
+  const c={A:{s:0,w:0,seq:[]},B:{s:0,w:0,seq:[]}};
+  for(const d of [...NIGHTS.keys()].sort((x,y)=>x-y)){const e=NIGHTS.get(d);if(d>upTo||SETTLE.has(d))continue;const f=foodFor(d);
+    if(tycheSick(e)){c[f].s++;c[f].seq.push("s")}else{c[f].w++;c[f].seq.push("w")}}
   return c;
 }
 function renderTop(){
@@ -261,35 +262,35 @@ function renderTop(){
 }
 
 // cups
-function cupSVG(food,s,w){
-  const W=150,H=190, bricks=[];
-  const all=[{c:"s"},{c:"w"}]; // the prior
-  for(let i=0;i<s;i++)all.push({c:"s"});for(let i=0;i<w;i++)all.push({c:"w"});
+function cupSVG(food,seq,anim="all"){
+  const W=150,H=190, bricks=[], all=["s","w",...seq]; // the prior, then each night in order
   const perRow=5,bw=20,bh=11,x0=26,y0=H-22;
-  all.forEach((b,i)=>{const r=Math.floor(i/perRow),k=i%perRow;
-    bricks.push(`<rect class="brick" style="animation-delay:${(i*0.04).toFixed(2)}s" x="${x0+k*(bw+2)}" y="${y0-(r+1)*(bh+2)}" width="${bw}" height="${bh}" rx="2" fill="${b.c=="s"?"#111":"#f5f5f5"}" stroke="#555" stroke-width="1"/>`)});
+  all.forEach((c,i)=>{const r=Math.floor(i/perRow),k=i%perRow;
+    const a= anim=="all" ? `class="brick" style="animation-delay:${(i*0.04).toFixed(2)}s"` : (anim=="last"&&i==all.length-1) ? `class="brick last"` : "";
+    bricks.push(`<rect ${a} x="${x0+k*(bw+2)}" y="${y0-(r+1)*(bh+2)}" width="${bw}" height="${bh}" rx="2" fill="${c=="s"?"#111":"#f5f5f5"}" stroke="#555" stroke-width="1"/>`)});
   const col=food=="A"?"var(--a)":"var(--b)";
-  return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
-    <style>.brick{animation:drop .5s cubic-bezier(.3,1.4,.6,1) both}@keyframes drop{from{transform:translateY(-${H}px);opacity:0}to{transform:none;opacity:1}}</style>
+  return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" data-food="${food}">
+    <style>.brick{animation:drop .5s cubic-bezier(.3,1.4,.6,1) both}.brick.last{animation-duration:.7s}@keyframes drop{from{transform:translateY(-${H}px);opacity:0}to{transform:none;opacity:1}}</style>
     ${bricks.join("")}
     <path d="M18 20 L28 ${H-12} Q30 ${H-6} 38 ${H-6} L112 ${H-6} Q120 ${H-6} 122 ${H-12} L132 20" fill="none" stroke="${col}" stroke-width="4" stroke-linecap="round"/>
     </svg>`;
 }
-function renderCups(upTo=30){
+function renderCups(upTo=30,anim="all",only=null){
   const c=counts(upTo), el=document.getElementById("cups");el.innerHTML="";
   for(const f of ["A","B"]){
     const s=c[f].s+1,w=c[f].w+1,g=s/(s+w);
     const div=document.createElement("div");div.className="cup";
-    div.innerHTML=`<div class="pill ${f=="A"?"pa":"pb"}" style="display:inline-block">Food ${f}</div>${cupSVG(f,c[f].s,c[f].w)}
-      <div class="guess">${Math.round(g*100)}%</div><div class="sub">${s} black ÷ ${s+w} bricks<br>= chance of a sick night</div>`;
+    div.innerHTML=`<div class="pill ${f=="A"?"pa":"pb"}" style="display:inline-block">Food ${f}</div>${cupSVG(f,c[f].seq,only&&only!=f?"none":anim)}
+      <div class="guess" id="guess${f}">${Math.round(g*100)}%</div><div class="sub">${s} black ÷ ${s+w} bricks<br>= chance of a sick night</div>`;
     el.appendChild(div);
   }
 }
 
 // belief curves
 function setupCanvas(cv){const dpr=window.devicePixelRatio||1,w=cv.clientWidth,h=+cv.getAttribute("height");cv.width=w*dpr;cv.height=h*dpr;cv.style.height=h+"px";const ctx=cv.getContext("2d");ctx.setTransform(dpr,0,0,dpr,0,0);return{ctx,w,h}}
-function drawBeliefs(upTo=30){
-  const {ctx,w,h}=setupCanvas(document.getElementById("beliefs")), c=counts(upTo);
+function drawBeliefs(upTo=30,P=null){
+  const {ctx,w,h}=setupCanvas(document.getElementById("beliefs")), c0=counts(upTo);
+  const c=P?{A:{s:P.A[0]-1,w:P.A[1]-1},B:{s:P.B[0]-1,w:P.B[1]-1}}:c0;
   ctx.clearRect(0,0,w,h);
   const pad=28, xs=x=>pad+x*(w-2*pad), maxY=Math.max(...["A","B"].flatMap(f=>{const a=c[f].s+1,b=c[f].w+1;return Array.from({length:99},(_,i)=>betaPdf((i+1)/100,a,b))}),1);
   const ys=y=>h-pad-(y/maxY)*(h-2*pad);
@@ -420,15 +421,79 @@ document.getElementById("saveBtn").onclick=async()=>{
     try{await fetch(f.action,{method:"POST",mode:"no-cors",body:fd})}catch(err){msg.textContent="Couldn't save: check the wifi and try again.";return}
     const pend=LS("tyche_pending")||[];pend.push(e);LSset("tyche_pending",pend);
   }
-  ENTRIES.push(e);NIGHTS=nights(ENTRIES);renderTop();renderCups();drawBeliefs();renderFees();renderRecent();
+  const before=counts();
+  ENTRIES.push(e);NIGHTS=nights(ENTRIES);renderTop();renderFees();renderRecent();
+  celebrate(before,e);
   msg.innerHTML=`<span class="saved">Saved! +£${CONFIG.FEE} for ${e.who} 🎉</span>`+(CONFIG.FORM?"":" <span class='sub'>(demo: not really saved)</span>");
   F.sick=null;document.getElementById("qNotes").value="";drawLogger();
 };
+// ---- the logging animation ----
+function sureness(c,n=4000){let bB=0;for(let i=0;i<n;i++){const pA=betaSample(c.A.s+1,c.A.w+1),pB=betaSample(c.B.s+1,c.B.w+1);if(pB<pA)bB++}return bB/n}
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const ease=t=>t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2;
+function tween(ms,fn){return new Promise(res=>{const t0=performance.now();let done=false;const fin=()=>{if(!done){done=true;fn(1);res()}};setTimeout(fin,ms+400);(function f(now){if(done)return;const t=Math.min(1,(now-t0)/ms);fn(ease(t));t<1?requestAnimationFrame(f):fin()})(t0)})}
+async function celebrate(before,e){
+  if(matchMedia("(prefers-reduced-motion: reduce)").matches||location.hash=="#testcard"){renderCups(30,"none");drawBeliefs();const d=dayIndex(e.date),f=foodFor(d),after=counts();showCard(before,after,e,d,f,!SETTLE.has(d)&&(after[f].s+after[f].w)>(before[f].s+before[f].w),tycheSick(e));return}
+  const d=dayIndex(e.date), f=foodFor(d), counts_=!SETTLE.has(d)&&d>=1&&d<=30&&[...NIGHTS.values()].find(x=>x.day==d)===NIGHTS.get(d);
+  const after=counts(), sick=tycheSick(e);
+  const inCup = counts_ && (after[f].s+after[f].w) > (before[f].s+before[f].w);
+  // timeline pop
+  const tile=document.getElementById("timeline").children[d-1];
+  if(tile)tile.animate([{transform:"scale(1)"},{transform:"scale(1.35)"},{transform:"scale(1)"}],{duration:700,easing:"ease-out"});
+  if(inCup){
+    const cupsEl=document.getElementById("cups");cupsEl.scrollIntoView({behavior:"smooth",block:"center"});
+    await sleep(650);
+    // flying brick
+    const btn=document.getElementById("saveBtn").getBoundingClientRect(), target=cupsEl.querySelector(`svg[data-food="${f}"]`).getBoundingClientRect();
+    const br=document.createElement("div");
+    Object.assign(br.style,{position:"fixed",left:btn.left+btn.width/2-12+"px",top:btn.top+"px",width:"24px",height:"13px",borderRadius:"3px",background:sick?"#111":"#f5f5f5",border:"1px solid #888",zIndex:50,boxShadow:"0 4px 14px rgba(0,0,0,.5)"});
+    document.body.appendChild(br);
+    const dx=target.left+target.width/2-(btn.left+btn.width/2), dy=target.top+20-btn.top;
+    await Promise.race([sleep(1100),br.animate([{transform:"translate(0,0) rotate(0)"},{transform:`translate(${dx*0.5}px,${dy*0.5-160}px) rotate(200deg)`},{transform:`translate(${dx}px,${dy}px) rotate(360deg)`}],{duration:900,easing:"cubic-bezier(.4,0,.6,1)"}).finished]);
+    br.remove();
+    renderCups(30,"last",f);
+    // tick the percentage
+    const g0=(before[f].s+1)/(before[f].s+before[f].w+2), g1=(after[f].s+1)/(after[f].s+after[f].w+2), gEl=document.getElementById("guess"+f);
+    tween(900,t=>gEl.textContent=Math.round(100*(g0+(g1-g0)*t))+"%");
+    // morph the belief curves
+    const P0={A:[before.A.s+1,before.A.w+1],B:[before.B.s+1,before.B.w+1]}, P1={A:[after.A.s+1,after.A.w+1],B:[after.B.s+1,after.B.w+1]};
+    await sleep(500);
+    document.getElementById("beliefs").scrollIntoView({behavior:"smooth",block:"center"});
+    await sleep(400);
+    await tween(1400,t=>drawBeliefs(30,{A:P0.A.map((v,i)=>v+(P1.A[i]-v)*t),B:P0.B.map((v,i)=>v+(P1.B[i]-v)*t)}));
+  } else {renderCups(30,"none");drawBeliefs()}
+  showCard(before,after,e,d,f,inCup,sick);
+}
+function showCard(before,after,e,d,f,inCup,sick){
+  document.getElementById("card")?.remove();
+  const s0=sureness(before), s1=sureness(after);
+  const lead=s1>=0.5?"B":"A", p0=lead=="B"?s0:1-s0, p1=lead=="B"?s1:1-s1;
+  const colA=getComputedStyle(document.documentElement).getPropertyValue("--a"), colB=getComputedStyle(document.documentElement).getPropertyValue("--b");
+  const card=document.createElement("div");card.id="card";
+  Object.assign(card.style,{position:"fixed",left:"50%",bottom:"16px",transform:"translate(-50%,140%)",width:"min(560px,calc(100% - 32px))",background:"#fff",color:"#111",borderRadius:"18px",padding:"16px 18px",zIndex:60,boxShadow:"0 10px 40px rgba(0,0,0,.6)",transition:"transform .5s cubic-bezier(.3,1.3,.5,1)"});
+  const what = sick ? "a sick night 🤢" : e.sick ? "Loki's sick, not Tyche's 🙀" : "a well night 😺";
+  card.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:20px">Night ${d} logged: ${what}</b><span style="font-size:26px;font-weight:700;color:#2e7d32">+£${CONFIG.FEE}</span></div>
+    <div style="color:#555;margin:2px 0 10px">Recorded by ${e.who}. Thank you, scientist.</div>
+    ${inCup?`<div>Food ${f}'s chance of a sick night: <b>${Math.round(100*(before[f].s+1)/(before[f].s+before[f].w+2))}% → ${Math.round(100*(after[f].s+1)/(after[f].s+after[f].w+2))}%</b></div>
+    <div style="margin-top:10px">How sure are we that <b style="color:${lead=="A"?colA:colB}">Food ${lead}</b> is kinder?</div>
+    <div style="position:relative;height:26px;border-radius:13px;background:linear-gradient(90deg,#eceff1,#c8e6c9 60%,#66bb6a);margin:8px 0 2px">
+      <div id="needle" style="position:absolute;top:-5px;width:4px;height:36px;background:#111;border-radius:2px;left:${Math.max(0,Math.min(100,(p0-0.5)*200)).toFixed(1)}%;transition:left 1.4s cubic-bezier(.3,1.2,.5,1)"></div></div>
+    <div style="display:flex;justify-content:space-between;color:#777;font-size:13px"><span>50% (coin toss)</span><span>100% (certain)</span></div>
+    <div style="margin-top:6px">We were <b>${Math.round(p0*100)}%</b> sure. Now: <b id="sureNow">${Math.round(p0*100)}%</b></div>`
+    :`<div>${SETTLE.has(d)?"This is a settling-in night: it's logged and paid, but it doesn't go in the cups.":"This night was already logged, so it counts as a peer-review check."}</div>`}
+    <div style="text-align:right;margin-top:8px;color:#777;font-size:13px">tap to close</div>`;
+  card.onclick=()=>card.remove();
+  document.body.appendChild(card);
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{card.style.transform="translate(-50%,0)";
+    setTimeout(()=>{const n=document.getElementById("needle");if(n){const pos=x=>Math.max(0,Math.min(100,(x-0.5)*200));
+      requestAnimationFrame(()=>{n.style.left=pos(p1)+"%";const sn=document.getElementById("sureNow");tween(1400,t=>sn.textContent=Math.round(100*(p0+(p1-p0)*t))+"%")})}},450)}));
+  setTimeout(()=>card.remove(),15000);
+}
 drawLogger();
 document.getElementById("replayBtn").onclick=replay;
 document.getElementById("mcBtn").onclick=runMC;
 addEventListener("resize",()=>{drawBeliefs()});
-init().then(()=>{if(location.hash=="#auto")runMC()});
+init().then(()=>{if(location.hash=="#auto")runMC();if(location.hash=="#testlog"||location.hash=="#testcard"){F.who=CONFIG.NAMES[0];F.sick=0;F.night=isoOf(startDate.getTime()+24*DAYMS);drawLogger();document.getElementById("saveBtn").click()}});
 </script>
 </body>
 </html>
