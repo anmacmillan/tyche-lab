@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Tyche Lab">
+<title>Tyche Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0f1417; --panel:#182025; --panel2:#1f2a31; --ink:#e8eef1; --muted:#90a4ae;
+  --a:#ffb74d; --b:#4fc3f7; --sick:#ef5350; --well:#e8eef1; --settle:#37474f; --good:#81c784;
+  --radius:16px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:'Source Sans 3',system-ui,sans-serif;font-size:17px;line-height:1.4}
+body{padding:16px;padding-top:max(16px,env(safe-area-inset-top));max-width:1100px;margin:0 auto}
+h1,h2{font-family:'Special Elite','Courier New',monospace;font-weight:400;margin:0}
+h1{font-size:clamp(28px,6vw,44px)}
+h2{font-size:22px;margin-bottom:6px}
+.sub{color:var(--muted)}
+.demo{display:inline-block;background:var(--sick);color:#fff;border-radius:8px;padding:2px 10px;font-weight:700;font-size:14px;margin-left:8px;vertical-align:middle}
+.grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));margin-top:16px}
+.panel{background:var(--panel);border-radius:var(--radius);padding:16px}
+.wide{grid-column:1/-1}
+.today{display:flex;gap:16px;flex-wrap:wrap;align-items:center}
+.pill{border-radius:999px;padding:6px 14px;font-weight:700}
+.pa{background:var(--a);color:#222}.pb{background:var(--b);color:#222}.ps{background:var(--settle);color:var(--ink)}
+.big{font-size:44px;font-weight:700;line-height:1}
+.timeline{display:grid;grid-template-columns:repeat(10,1fr);gap:6px;margin-top:10px}
+.day{aspect-ratio:1;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:13px;position:relative;border:2px solid transparent}
+.day .n{font-family:'Special Elite',monospace;font-size:15px}
+.day.A{background:rgba(255,183,77,.22)}.day.B{background:rgba(79,195,247,.22)}
+.day.settle{background:repeating-linear-gradient(45deg,#26323a,#26323a 5px,#1d272d 5px,#1d272d 10px)}
+.day.today{border-color:#fff}
+.day .dot{width:12px;height:12px;border-radius:50%;margin-top:2px}
+.day .dot.s{background:var(--sick)}.day .dot.w{background:var(--good)}.day .dot.u{background:transparent;border:1px dashed var(--muted)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:14px;color:var(--muted);margin-top:8px}
+.legend span::before{content:"";display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:5px;vertical-align:middle}
+.lg-s::before{background:var(--sick)}.lg-w::before{background:var(--good)}.lg-u::before{border:1px dashed var(--muted)}
+.cups{display:flex;justify-content:space-around;gap:10px;align-items:flex-end}
+.cup{text-align:center}
+.cup svg{display:block;margin:0 auto}
+.cup .guess{font-size:30px;font-weight:700}
+button{font-family:inherit;font-size:17px;font-weight:700;border:0;border-radius:12px;padding:12px 18px;background:var(--ink);color:var(--bg);cursor:pointer;min-height:48px}
+button.ghost{background:var(--panel2);color:var(--ink)}
+button:disabled{opacity:.4}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+canvas{width:100%;display:block;border-radius:12px;background:var(--panel2)}
+.verdict{font-size:22px;font-weight:700;margin:10px 0 4px}
+.verdict .pct{font-size:40px}
+.explain{color:var(--muted);font-size:15px;margin-top:6px}
+table{width:100%;border-collapse:collapse}
+td,th{padding:8px 6px;border-bottom:1px solid #2c3a42;text-align:left}
+th{color:var(--muted);font-weight:600;font-size:14px}
+.money{font-size:28px;font-weight:700;color:var(--good)}
+.contract{border:2px dashed var(--muted);border-radius:12px;padding:10px 12px;font-size:15px;margin-top:10px}
+.bar{height:14px;border-radius:7px;background:var(--panel2);overflow:hidden;margin:6px 0}
+.bar i{display:block;height:100%}
+
+.log{border:2px solid var(--good)}
+.q{margin:14px 0 6px;font-weight:700}
+.choices{display:flex;gap:8px;flex-wrap:wrap}
+.choices button{background:var(--panel2);color:var(--ink);min-width:110px;font-size:18px}
+.choices button.on{background:var(--good);color:#10240f}
+.nightpick{display:flex;align-items:center;gap:10px}
+.nightpick .lbl{font-size:20px;font-weight:700;min-width:210px;text-align:center}
+textarea{width:100%;font:inherit;border-radius:12px;border:0;padding:10px;background:var(--panel2);color:var(--ink);min-height:60px}
+.saved{color:var(--good);font-weight:700;font-size:18px}
+footer{color:var(--muted);font-size:13px;margin:24px 0 8px;text-align:center}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🧪 Tyche Lab <span id="demoTag" class="demo" hidden>DEMO DATA</span></h1>
+  <div class="sub">The Great Tyche Food Trial · Chief Scientists <span id="names"></span></div>
+</header>
+
+<div class="grid">
+
+  <section class="panel wide log" id="logPanel">
+    <h2>📝 Log this morning</h2>
+    <div class="sub">Check the floor first, before anyone cleans up. Sick found this morning belongs to <b>last night</b>.</div>
+    <div class="q">Who is recording?</div>
+    <div class="choices" id="qWho"></div>
+    <div class="q">Which night?</div>
+    <div class="nightpick"><button class="ghost" id="nPrev">◀</button><div class="lbl" id="nLbl"></div><button class="ghost" id="nNext">▶</button></div>
+    <div class="q">Was there any sick overnight?</div>
+    <div class="choices" id="qSick"></div>
+    <div id="sickMore" hidden>
+      <div class="q">Whose was it?</div><div class="choices" id="qWhose"></div>
+      <div class="q">What did it look like?</div><div class="choices" id="qLook"></div>
+    </div>
+    <div class="q">Notes (optional)</div>
+    <textarea id="qNotes" placeholder="e.g. ate very fast, Loki pinched her food, found in the hall"></textarea>
+    <div class="row" style="margin-top:12px"><button id="saveBtn">Save entry</button><span id="saveMsg"></span></div>
+  </section>
+
+  <section class="panel wide">
+    <div class="today">
+      <div><div class="sub">Trial day</div><div class="big" id="dayNum">–</div></div>
+      <div><div class="sub">Tonight's wet food</div><div id="foodToday" class="pill">–</div></div>
+      <div><div class="sub">Nights logged</div><div class="big" id="logged">–</div></div>
+      <div><div class="sub">Tyche's sick nights</div><div class="big" id="sickN" style="color:var(--sick)">–</div></div>
+    </div>
+    <div class="timeline" id="timeline"></div>
+    <div class="legend"><span class="lg-s">sick night</span><span class="lg-w">well night</span><span class="lg-u">not logged</span><span>stripes = settling-in (doesn't count)</span></div>
+  </section>
+
+  <section class="panel">
+    <h2>The Bayes cups</h2>
+    <div class="sub">Every test night drops a brick in: black = sick, white = well. Each cup started with one of each.</div>
+    <div class="cups" id="cups"></div>
+    <div class="row" style="margin-top:10px"><button id="replayBtn" class="ghost">▶ Replay the trial</button></div>
+    <div class="explain">Best guess = black bricks ÷ all bricks. Watch how the first few nights swing it about, and later ones hardly move it.</div>
+  </section>
+
+  <section class="panel">
+    <h2>What we believe</h2>
+    <div class="sub">How likely each "true sickness rate" is, given the nights so far. Tall and thin = sure. Low and wide = not sure yet.</div>
+    <canvas id="beliefs" height="260"></canvas>
+    <div class="legend"><span style="color:var(--a)">■ Food A</span><span style="color:var(--b)">■ Food B</span><span>← less sick · more sick →</span></div>
+  </section>
+
+  <section class="panel wide">
+    <h2>1,000 imagined worlds (Monte Carlo)</h2>
+    <div class="sub">We don't know Tyche's <i>true</i> sickness rate on each food. So the computer imagines 1,000 worlds that fit what we've seen, and in each one checks which food is kinder to her tummy.</div>
+    <div class="row" style="margin:12px 0"><button id="mcBtn">🎲 Run 1,000 worlds</button><span class="sub" id="mcStatus"></span></div>
+    <canvas id="dots" height="250"></canvas>
+    <div class="verdict" id="verdict">&nbsp;</div>
+    <canvas id="hist" height="200" style="margin-top:8px"></canvas>
+    <div class="explain">Each dot is one imagined world, coloured by the winning food. Below, every world drops its two imagined rates into the bars: they pile up into the same shapes as the belief curves. That's how scientists turn "we saw this" into "we're this sure".</div>
+  </section>
+
+  <section class="panel">
+    <h2>Field research fees</h2>
+    <div class="sub">£<span id="rate">1</span> for each night honestly logged, paid at the end of the trial.</div>
+    <table id="fees"></table>
+    <div class="contract"><b>The research contract.</b> You are paid for honest recording, never for results: a sick night and a well night pay exactly the same. A made-up entry cancels that week's fees. Real scientists who fake data lose their jobs.</div>
+  </section>
+
+  <section class="panel">
+    <h2>Latest entries</h2>
+    <table id="recent"></table>
+  </section>
+
+</div>
+
+<footer>Tyche Lab · new entries reach the other iPads within about 5 minutes</footer>
+
+<script>
+// ===== CONFIG: the only part to edit =====
+const CONFIG = {
+  START: "2026-10-02",          // trial day 1 (the night of this date)
+  CSV_URL: "",                  // Google Sheet "Publish to web" CSV link; blank = demo data
+  FORM: null,                   // {action:".../formResponse", who:"entry.1", night:"entry.2", sick:"entry.3", whose:"entry.4", look:"entry.5", notes:"entry.6"}
+  NAMES: ["Manon", "Margot"],
+  FEE: 1,                       // £ per night logged
+  PAID: { Manon: 0, Margot: 0 } // £ paid out (fees are paid at the end of the trial)
+};
+// ==========================================
+
+const SETTLE = new Set([1,2,11,12,21,22]);
+const foodFor = d => (d>=11 && d<=20) ? "B" : "A";
+const DAYMS = 86400000;
+const startDate = new Date(CONFIG.START + "T12:00:00");
+const dayIndex = iso => Math.round((new Date(iso + "T12:00:00") - startDate)/DAYMS) + 1;
+
+// ---- random numbers (seedable) ----
+function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+let rnd = Math.random;
+function gauss(){let u=0,v=0;while(!u)u=rnd();while(!v)v=rnd();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)}
+function gamma(k){ // Marsaglia–Tsang
+  if(k<1){return gamma(k+1)*Math.pow(rnd(),1/k)}
+  const d=k-1/3,c=1/Math.sqrt(9*d);
+  for(;;){let x,v;do{x=gauss();v=1+c*x}while(v<=0);v=v*v*v;const u=rnd();
+    if(u<1-0.0331*x*x*x*x||Math.log(u)<0.5*x*x+d*(1-v+Math.log(v)))return d*v}
+}
+const betaSample=(a,b)=>{const x=gamma(a),y=gamma(b);return x/(x+y)};
+function lnGamma(z){const g=7,c=[0.99999999999980993,676.5203681218851,-1259.1392167224028,771.32342877765313,-176.61502916214059,12.507343278686905,-0.13857109526572012,9.9843695780195716e-6,1.5056327351493116e-7];
+  if(z<0.5)return Math.log(Math.PI/Math.sin(Math.PI*z))-lnGamma(1-z);z-=1;let x=c[0];for(let i=1;i<g+2;i++)x+=c[i]/(z+i);const t=z+g+0.5;return 0.5*Math.log(2*Math.PI)+(z+0.5)*Math.log(t)-t+Math.log(x)}
+const betaPdf=(x,a,b)=>Math.exp((a-1)*Math.log(x)+(b-1)*Math.log(1-x)+lnGamma(a+b)-lnGamma(a)-lnGamma(b));
+
+// ---- data ----
+function parseCSV(text){
+  const rows=[];let row=[],f="",q=false;
+  for(let i=0;i<text.length;i++){const ch=text[i];
+    if(q){if(ch=='"'){if(text[i+1]=='"'){f+='"';i++}else q=false}else f+=ch}
+    else if(ch=='"')q=true;else if(ch==','){row.push(f);f=""}
+    else if(ch=='\n'||ch=='\r'){if(ch=='\r'&&text[i+1]=='\n')i++;row.push(f);rows.push(row);row=[];f=""}
+    else f+=ch}
+  if(f||row.length){row.push(f);rows.push(row)}
+  return rows.filter(r=>r.some(c=>c.trim()));
+}
+function toISO(s){
+  s=(s||"").trim(); let m;
+  if(m=s.match(/^(\d{4})-(\d{2})-(\d{2})/))return `${m[1]}-${m[2]}-${m[3]}`;
+  if(m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/))return `${m[3]}-${String(m[2]).padStart(2,"0")}-${String(m[1]).padStart(2,"0")}`; // dd/mm/yyyy (UK sheet)
+  return null;
+}
+function fromSheet(rows){
+  const h=rows[0].map(x=>x.toLowerCase());
+  const col=k=>h.findIndex(x=>x.includes(k));
+  const cWho=col("who"),cNight=h.findIndex(x=>x.includes("which night")),cSick=col("overnight"),cWhose=col("whose"),cLook=col("look"),cNotes=col("note"),cTs=col("timestamp");
+  return rows.slice(1).map(r=>{
+    const iso=toISO(r[cNight])||toISO(r[cTs]);
+    const n=(r[cSick]||"0").trim();
+    return {date:iso, who:(r[cWho]||"").trim(), sick:n.startsWith("2")?2:parseInt(n)||0,
+            whose:(r[cWhose]||"").trim(), look:(r[cLook]||"").trim(), notes:(r[cNotes]||"").trim()};
+  }).filter(e=>e.date);
+}
+function demoData(){
+  const r=mulberry(7), out=[], today=Math.min(30,24);
+  for(let d=1;d<=today;d++){
+    if(r()<0.08)continue; // a missed morning
+    const p=foodFor(d)=="A"?0.38:0.12, sick=r()<p?(r()<0.25?2:1):0;
+    const dt=new Date(startDate.getTime()+(d-1)*DAYMS).toISOString().slice(0,10);
+    out.push({date:dt, who:CONFIG.NAMES[d%2], sick, whose:sick?(r()<0.85?"Tyche":"Not sure"):"", look:sick?["Food","Hairball","Foam"][Math.floor(r()*3)]:"", notes:""});
+  }
+  return out;
+}
+
+// one entry per night (first one counts; later ones are peer review)
+function nights(entries){
+  const by=new Map();
+  for(const e of entries){const d=dayIndex(e.date);if(d<1||d>30)continue;if(!by.has(d))by.set(d,{...e,day:d})}
+  return by;
+}
+const tycheSick = e => e.sick>0 && !/loki/i.test(e.whose);
+
+// ---- rendering ----
+let ENTRIES=[], NIGHTS=new Map();
+function counts(upTo=30){
+  const c={A:{s:0,w:0},B:{s:0,w:0}};
+  for(const [d,e] of NIGHTS){if(d>upTo||SETTLE.has(d))continue;const f=foodFor(d);tycheSick(e)?c[f].s++:c[f].w++}
+  return c;
+}
+function renderTop(){
+  document.getElementById("names").textContent=CONFIG.NAMES.join(" & ");
+  const todayD=Math.max(1,Math.min(30,dayIndex(new Date().toISOString().slice(0,10))));
+  const shownDay = CONFIG.CSV_URL ? todayD : Math.max(...NIGHTS.keys(),1)+1;
+  const d=Math.min(30,shownDay);
+  document.getElementById("dayNum").textContent=d;
+  const ft=document.getElementById("foodToday");
+  ft.textContent="Food "+foodFor(d)+(SETTLE.has(d)?" (settling in)":"");
+  ft.className="pill "+(SETTLE.has(d)?"ps":foodFor(d)=="A"?"pa":"pb");
+  document.getElementById("logged").textContent=NIGHTS.size;
+  document.getElementById("sickN").textContent=[...NIGHTS.values()].filter(tycheSick).length;
+  const tl=document.getElementById("timeline");tl.innerHTML="";
+  for(let i=1;i<=30;i++){
+    const e=NIGHTS.get(i), el=document.createElement("div");
+    el.className="day "+(SETTLE.has(i)?"settle":foodFor(i))+(i==d?" today":"");
+    el.innerHTML=`<span class="n">${i}</span><span class="dot ${e?(tycheSick(e)?"s":"w"):"u"}"></span>`;
+    el.title=e?`${e.date}: ${tycheSick(e)?"sick":"well"} (logged by ${e.who||"?"})`:"not logged";
+    tl.appendChild(el);
+  }
+}
+
+// cups
+function cupSVG(food,s,w){
+  const W=150,H=190, bricks=[];
+  const all=[{c:"s"},{c:"w"}]; // the prior
+  for(let i=0;i<s;i++)all.push({c:"s"});for(let i=0;i<w;i++)all.push({c:"w"});
+  const perRow=5,bw=20,bh=11,x0=26,y0=H-22;
+  all.forEach((b,i)=>{const r=Math.floor(i/perRow),k=i%perRow;
+    bricks.push(`<rect class="brick" style="animation-delay:${(i*0.04).toFixed(2)}s" x="${x0+k*(bw+2)}" y="${y0-(r+1)*(bh+2)}" width="${bw}" height="${bh}" rx="2" fill="${b.c=="s"?"#111":"#f5f5f5"}" stroke="#555" stroke-width="1"/>`)});
+  const col=food=="A"?"var(--a)":"var(--b)";
+  return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+    <style>.brick{animation:drop .5s cubic-bezier(.3,1.4,.6,1) both}@keyframes drop{from{transform:translateY(-${H}px);opacity:0}to{transform:none;opacity:1}}</style>
+    ${bricks.join("")}
+    <path d="M18 20 L28 ${H-12} Q30 ${H-6} 38 ${H-6} L112 ${H-6} Q120 ${H-6} 122 ${H-12} L132 20" fill="none" stroke="${col}" stroke-width="4" stroke-linecap="round"/>
+    </svg>`;
+}
+function renderCups(upTo=30){
+  const c=counts(upTo), el=document.getElementById("cups");el.innerHTML="";
+  for(const f of ["A","B"]){
+    const s=c[f].s+1,w=c[f].w+1,g=s/(s+w);
+    const div=document.createElement("div");div.className="cup";
+    div.innerHTML=`<div class="pill ${f=="A"?"pa":"pb"}" style="display:inline-block">Food ${f}</div>${cupSVG(f,c[f].s,c[f].w)}
+      <div class="guess">${Math.round(g*100)}%</div><div class="sub">${s} black ÷ ${s+w} bricks<br>= chance of a sick night</div>`;
+    el.appendChild(div);
+  }
+}
+
+// belief curves
+function setupCanvas(cv){const dpr=window.devicePixelRatio||1,w=cv.clientWidth,h=+cv.getAttribute("height");cv.width=w*dpr;cv.height=h*dpr;cv.style.height=h+"px";const ctx=cv.getContext("2d");ctx.setTransform(dpr,0,0,dpr,0,0);return{ctx,w,h}}
+function drawBeliefs(upTo=30){
+  const {ctx,w,h}=setupCanvas(document.getElementById("beliefs")), c=counts(upTo);
+  ctx.clearRect(0,0,w,h);
+  const pad=28, xs=x=>pad+x*(w-2*pad), maxY=Math.max(...["A","B"].flatMap(f=>{const a=c[f].s+1,b=c[f].w+1;return Array.from({length:99},(_,i)=>betaPdf((i+1)/100,a,b))}),1);
+  const ys=y=>h-pad-(y/maxY)*(h-2*pad);
+  ctx.strokeStyle="#2c3a42";ctx.fillStyle="#90a4ae";ctx.font="12px Source Sans 3";
+  for(let t=0;t<=1;t+=0.25){ctx.beginPath();ctx.moveTo(xs(t),pad/2);ctx.lineTo(xs(t),h-pad);ctx.stroke();ctx.fillText(Math.round(t*100)+"%",xs(t)-10,h-8)}
+  for(const f of ["A","B"]){
+    const a=c[f].s+1,b=c[f].w+1,col=getComputedStyle(document.documentElement).getPropertyValue(f=="A"?"--a":"--b");
+    ctx.beginPath();for(let i=1;i<200;i++){const x=i/200;const y=ys(betaPdf(x,a,b));i==1?ctx.moveTo(xs(x),y):ctx.lineTo(xs(x),y)}
+    ctx.lineWidth=3;ctx.strokeStyle=col;ctx.stroke();
+    ctx.lineTo(xs(199/200),ys(0));ctx.lineTo(xs(1/200),ys(0));ctx.closePath();ctx.globalAlpha=.18;ctx.fillStyle=col;ctx.fill();ctx.globalAlpha=1;
+  }
+}
+
+// replay
+let replaying=false;
+async function replay(){
+  if(replaying)return;replaying=true;const btn=document.getElementById("replayBtn");btn.disabled=true;
+  const last=Math.max(...NIGHTS.keys(),1);
+  for(let d=0;d<=last;d++){renderCups(d);drawBeliefs(d);await new Promise(r=>setTimeout(r,d<6?650:260))}
+  replaying=false;btn.disabled=false;
+}
+
+// Monte Carlo
+let mcRunning=false;
+async function runMC(){
+  if(mcRunning)return;mcRunning=true;const btn=document.getElementById("mcBtn");btn.disabled=true;
+  rnd=Math.random;
+  const c=counts(), aA=c.A.s+1,bA=c.A.w+1,aB=c.B.s+1,bB=c.B.w+1, N=1000;
+  const dcv=document.getElementById("dots"), cols=dcv.clientWidth<600?25:40, rows=N/cols;
+  dcv.setAttribute("height", Math.round(dcv.clientWidth/cols*rows));
+  const dots=setupCanvas(dcv), hist=setupCanvas(document.getElementById("hist"));
+  const cell=dots.w/cols, r=cell*0.36, ox=0;
+  dots.ctx.clearRect(0,0,dots.w,dots.h);
+  for(let i=0;i<N;i++){const x=ox+(i%cols+.5)*cell,y=(Math.floor(i/cols)+.5)*cell;dots.ctx.beginPath();dots.ctx.arc(x,y,r,0,7);dots.ctx.fillStyle="#26323a";dots.ctx.fill()}
+  const bins=40, hA=new Array(bins).fill(0), hB=new Array(bins).fill(0);
+  const colA=getComputedStyle(document.documentElement).getPropertyValue("--a"), colB=getComputedStyle(document.documentElement).getPropertyValue("--b");
+  let winA=0,winB=0,i=0;
+  const verdict=document.getElementById("verdict"), status=document.getElementById("mcStatus");
+  function drawHist(){
+    const {ctx,w,h}=hist;ctx.clearRect(0,0,w,h);const m=Math.max(...hA,...hB,1),bw=(w-20)/bins;
+    for(let k=0;k<bins;k++){
+      const half=(bw-2)/2;ctx.fillStyle=colA;const ha=hA[k]/m*(h-24);ctx.fillRect(10+k*bw,h-18-ha,half,ha);
+      ctx.fillStyle=colB;const hb=hB[k]/m*(h-24);ctx.fillRect(10+k*bw+half,h-18-hb,half,hb)}
+    ctx.fillStyle="#90a4ae";ctx.font="12px Source Sans 3";ctx.fillText("0% sick nights",10,h-3);ctx.fillText("100%",w-38,h-3);
+  }
+  await new Promise(res=>{
+    function step(){
+      const batch=i<60?2:i<300?8:25;
+      for(let j=0;j<batch&&i<N;j++,i++){
+        const pA=betaSample(aA,bA),pB=betaSample(aB,bB), aWins=pA<pB;
+        aWins?winA++:winB++;
+        hA[Math.min(bins-1,Math.floor(pA*bins))]++;hB[Math.min(bins-1,Math.floor(pB*bins))]++;
+        const x=ox+(i%cols+.5)*cell,y=(Math.floor(i/cols)+.5)*cell;
+        dots.ctx.beginPath();dots.ctx.arc(x,y,r*1.1,0,7);dots.ctx.fillStyle=aWins?colA:colB;dots.ctx.fill();
+      }
+      drawHist();
+      const lead=winA>=winB?"A":"B", pct=Math.round(100*Math.max(winA,winB)/i);
+      status.textContent=`${i} of ${N} worlds`;
+      verdict.innerHTML=`Food <span style="color:${lead=="A"?colA:colB}">${lead}</span> is kinder in <span class="pct">${pct}%</span> of the worlds so far`;
+      if(i<N)requestAnimationFrame(step);else res();
+    }
+    step();
+  });
+  const lead=winA>=winB?"A":"B", pct=Math.round(100*Math.max(winA,winB)/N);
+  const word=pct>=95?"very sure":pct>=80?"fairly sure":"not sure yet";
+  verdict.innerHTML=`We're <span class="pct" style="color:${lead=="A"?colA:colB}">${pct}%</span> sure Food ${lead} suits Tyche better: <b>${word}</b>${pct<80?" (we need more nights)":""}.`;
+  mcRunning=false;btn.disabled=false;
+}
+
+// fees & recent
+function renderFees(){
+  const earned={};CONFIG.NAMES.forEach(n=>earned[n]=0);
+  for(const e of NIGHTS.values()){const n=CONFIG.NAMES.find(x=>e.who.toLowerCase().startsWith(x.toLowerCase()));if(n)earned[n]+=CONFIG.FEE}
+  const t=document.getElementById("fees");document.getElementById("rate").textContent=CONFIG.FEE;
+  t.innerHTML=`<tr><th>Scientist</th><th>Nights</th><th>Earned</th><th>Paid</th><th>Owed</th></tr>`+
+    CONFIG.NAMES.map(n=>{const p=CONFIG.PAID[n]||0;return `<tr><td>${n}</td><td>${earned[n]/CONFIG.FEE}</td><td>£${earned[n]}</td><td>£${p}</td><td class="money">£${earned[n]-p}</td></tr>`}).join("");
+}
+function renderRecent(){
+  const t=document.getElementById("recent"), last=[...NIGHTS.values()].sort((a,b)=>b.day-a.day).slice(0,6);
+  t.innerHTML=`<tr><th>Night</th><th>Food</th><th>Result</th><th>By</th></tr>`+last.map(e=>
+    `<tr><td>${e.day}</td><td>${foodFor(e.day)}${SETTLE.has(e.day)?" (settling)":""}</td><td>${tycheSick(e)?"🤢 sick"+(e.look?" ("+e.look.toLowerCase()+")":""):e.sick?"Loki 🙀":"✅ well"}</td><td>${e.who}</td></tr>`).join("");
+}
+
+async function init(){
+  if(CONFIG.CSV_URL){
+    try{const res=await fetch(CONFIG.CSV_URL+(CONFIG.CSV_URL.includes("?")?"&":"?")+"t="+Date.now());ENTRIES=fromSheet(parseCSV(await res.text()))}
+    catch(e){ENTRIES=[];document.querySelector(".sub").textContent="Couldn't load the data just now: try again in a minute."}
+  } else {ENTRIES=demoData();document.getElementById("demoTag").hidden=false}
+  mergePending();
+  NIGHTS=nights(ENTRIES);
+  renderTop();renderCups();drawBeliefs();renderFees();renderRecent();
+}
+// ---- logging ----
+const LS=k=>{try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}};
+const LSset=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+function mergePending(){
+  let pend=LS("tyche_pending")||[];
+  pend=pend.filter(p=>!ENTRIES.some(e=>e.date==p.date&&e.who==p.who));
+  LSset("tyche_pending",pend);
+  ENTRIES=ENTRIES.concat(pend);
+}
+const isoOf=d=>{const x=new Date(d);x.setHours(12);return x.toISOString().slice(0,10)};
+let F={who:LS("tyche_who")||"",night:isoOf(Date.now()-DAYMS),sick:null,whose:"Tyche",look:""};
+function choice(id,opts,key,after){
+  const el=document.getElementById(id);el.innerHTML="";
+  for(const [val,label] of opts){const b=document.createElement("button");b.textContent=label;if(F[key]===val)b.className="on";
+    b.onclick=()=>{F[key]=val;if(key=="who")LSset("tyche_who",val);drawLogger();after&&after()};el.appendChild(b)}
+}
+function drawLogger(){
+  choice("qWho",CONFIG.NAMES.map(n=>[n,n]),"who");
+  const d=dayIndex(F.night), dt=new Date(F.night+"T12:00:00");
+  document.getElementById("nLbl").textContent=`${d<1?"Before the trial":d>30?"After the trial":"Night "+d} · ${dt.toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"})}`;
+  choice("qSick",[[0,"No 😺"],[1,"Once"],[2,"Twice or more"]],"sick");
+  document.getElementById("sickMore").hidden=!(F.sick>0);
+  choice("qWhose",[["Tyche","Tyche"],["Loki","Loki"],["Not sure","Not sure"]],"whose");
+  choice("qLook",[["Food","Food"],["Hairball","Hairball"],["Foam","Foam"],["Other","Other"]],"look");
+  document.getElementById("saveBtn").disabled=!(F.who&&F.sick!==null);
+}
+document.getElementById("nPrev").onclick=()=>{F.night=isoOf(new Date(F.night+"T12:00:00")-DAYMS);drawLogger()};
+document.getElementById("nNext").onclick=()=>{const n=isoOf(new Date(F.night+"T12:00:00").getTime()+DAYMS);if(n<=isoOf(Date.now()))F.night=n;drawLogger()};
+document.getElementById("saveBtn").onclick=async()=>{
+  const msg=document.getElementById("saveMsg"), e={date:F.night,who:F.who,sick:F.sick,whose:F.sick?F.whose:"",look:F.sick?F.look:"",notes:document.getElementById("qNotes").value.trim()};
+  if(NIGHTS.has(dayIndex(e.date))&&!confirm("That night is already logged. Save another entry anyway?"))return;
+  if(CONFIG.FORM){
+    const fd=new FormData(),f=CONFIG.FORM;
+    fd.append(f.who,e.who);fd.append(f.night,e.date);fd.append(f.sick,e.sick==2?"2 or more":String(e.sick));
+    if(e.whose)fd.append(f.whose,e.whose);if(e.look)fd.append(f.look,e.look);if(e.notes)fd.append(f.notes,e.notes);
+    try{await fetch(f.action,{method:"POST",mode:"no-cors",body:fd})}catch(err){msg.textContent="Couldn't save: check the wifi and try again.";return}
+    const pend=LS("tyche_pending")||[];pend.push(e);LSset("tyche_pending",pend);
+  }
+  ENTRIES.push(e);NIGHTS=nights(ENTRIES);renderTop();renderCups();drawBeliefs();renderFees();renderRecent();
+  msg.innerHTML=`<span class="saved">Saved! +£${CONFIG.FEE} for ${e.who} 🎉</span>`+(CONFIG.FORM?"":" <span class='sub'>(demo: not really saved)</span>");
+  F.sick=null;document.getElementById("qNotes").value="";drawLogger();
+};
+drawLogger();
+document.getElementById("replayBtn").onclick=replay;
+document.getElementById("mcBtn").onclick=runMC;
+addEventListener("resize",()=>{drawBeliefs()});
+init().then(()=>{if(location.hash=="#auto")runMC()});
+</script>
+</body>
+</html>
